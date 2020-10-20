@@ -1,36 +1,53 @@
 import React, { Component } from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, TouchableHighlight, View } from 'react-native';
 import Tile from './Tile';
 // REFAZ TA UMA MERDA, FAZ COM UMA LISTA SIMPLES COM OS ITENS DENTRO
 export default class Field extends Component {
     constructor(props) {
         super(props);
         
-        this.state = {
+        this.default = {
             tiles: [],
+            loadingMessage: 'Waiting for Settings',
+            isLoading: true,
+            finished: false,
+            markedCount: 0,
         }
 
-        this.isLoading = true;
-        this.finished = false;
+        this.state = this.default;
 
         this.createTiles = this.createTiles.bind(this);
         this.onClickTile = this.onClickTile.bind(this);
         this.onLongClickTile = this.onLongClickTile.bind(this);
+        this.finishGame = this.finishGame.bind(this);
         
     }
     componentDidMount() {
-        this.createTiles();
     }
 
     onLongClickTile(index) {
         const tiles = this.state.tiles;
         tiles[index].marked = !tiles[index].marked;
-        
-        this.setState({tiles});
+
+        var markedCount = this.state.markedCount;
+
+        if(tiles[index].marked) {
+            markedCount++;
+        } else {
+            markedCount--;
+        }
+
+        this.props.markedChanged(markedCount);
+        this.setState({tiles, markedCount});
     }
     onClickTile(index) {
-        const tiles = this.state.tiles;
-        const current = {
+
+        if(this.state.finished) {
+            return;
+        }
+
+        var tiles = this.state.tiles;
+        var current = {
             index: index,
             content: tiles[index],
         };
@@ -167,19 +184,117 @@ export default class Field extends Component {
         
         tiles[index].showing = true;
 
+        tiles = this.checkField(tiles);
+
         this.setState({tiles});
     }
 
-    createTiles() {
+    checkField(field) {
+        var tiles = field;
+        var finished = this.state.finished;
+        var hideCount = 0;
+        for(var i = 0; i < tiles.length; i++) {
+            if(!tiles[i].showing && !tiles[i].marked) {
+                hideCount++;
+            }
+        }
+        if(hideCount > 0) {
+            for(var i = 0; i < tiles.length; i++) {
+                if(tiles[i].value < 0 && tiles[i].showing) {
+                    this.setState({finished: true});
+                    finished = true;
+                }
+            }
+            if(finished) {
+                for(var i = 0; i < tiles.length; i++) {
+                    if(tiles[i].value < 0) {
+                        tiles[i].showing = true;
+                    }
+                }
+                this.props.finish();
+            }
+        } else {
+            var tiles = this.state.tiles;
+            var markedCount = 0;
+            for(var i = 0; i < tiles.length; i++) {
+                if(tiles[i].marked && tiles[i].value < 0) {
+                    markedCount++;
+                }
+            }
+
+            if(markedCount === this.bombsAmount) {
+                for(var i = 0; i < tiles.length; i++) {
+                    if(!tiles[i].marked) {
+                        tiles[i].showing = true;
+                    }
+                }
+            } else {
+                for(var i = 0; i < tiles.length; i++) {
+                    if(tiles[i].value < 0 || tiles[i].marked) {
+                        tiles[i].showing = true;
+                    }
+                }
+            }
+
+            this.setState({finished: true});
+            this.props.finish();
+        }
+        
+
+        return tiles;
+    }
+
+    verifyGame() {
+        var tiles = this.state.tiles;
+        var markedCount = 0;
+        for(var i = 0; i < tiles.length; i++) {
+            if(tiles[i].marked && tiles[i].value < 0) {
+                markedCount++;
+            }
+        }
+    }
+
+    finishGame() {
+        var tiles = this.state.tiles;
+        var markedCount = 0;
+        for(var i = 0; i < tiles.length; i++) {
+            if(tiles[i].marked && tiles[i].value < 0) {
+                markedCount++;
+            }
+        }
+
+        if(markedCount === this.bombsAmount) {
+            for(var i = 0; i < tiles.length; i++) {
+                if(!tiles[i].marked) {
+                    tiles[i].showing = true;
+                }
+            }
+        } else {
+            for(var i = 0; i < tiles.length; i++) {
+                if(tiles[i].value < 0 || tiles[i].marked) {
+                    tiles[i].showing = true;
+                }
+            }
+        }
+
+        this.setState({tiles, finished: true});
+        this.props.finish();
+    }
+
+    createTiles(size, level) {
+        this.setState({loadingMessage: 'Creating the Field...', ...this.default});
+
         const window = Dimensions.get('window');
         const width = window.width;
         const height = (window.height / 4) * 3;
-        this.tileSize = Math.floor(width / this.props.blockSize);
+        var blockSize = (size + 1) * 5;
 
-        this.blockSizeWidth = this.props.blockSize;
-        this.blockSizeHeight = Math.floor(height / this.tileSize);
+        this.tileSize = Math.floor(width / blockSize);
 
-        var tiles = [];
+        this.blockSizeWidth = blockSize;
+        this.blockSizeHeight = blockSize;
+
+        var tiles = new Array();
         for(var y = 0; y < this.blockSizeHeight; y++) {
             for(var x = 0; x < this.blockSizeWidth; x++) {
                 var index = (y * this.blockSizeWidth) + x;
@@ -192,8 +307,8 @@ export default class Field extends Component {
                 };
             }
         }
-        const bombsAmount = this.blockSizeWidth * this.blockSizeHeight * this.props.bombsAmount;
-        for(var i = 0; i < bombsAmount; i++) {
+        this.bombsAmount = Math.floor(this.blockSizeWidth * this.blockSizeHeight * (level / 10));
+        for(var i = 0; i < this.bombsAmount; i++) {
             var bombIndex = Math.floor(Math.random() * tiles.length);
             while (tiles[bombIndex].value !== 0) {
                 bombIndex = Math.floor(Math.random() * tiles.length);
@@ -245,16 +360,15 @@ export default class Field extends Component {
                 }
             }
         }
-
-        this.isLoading = false;
-
-        this.setState({tiles});
+        this.setState({tiles: []}, function() {
+            this.setState({tiles, isLoading: false})
+        });
     }
 
     render() {
         return (
             <View style={this.styles.content}>
-                {this.isLoading
+                {this.state.isLoading
                 ?this.renderLoading()
                 :this.renderField()}
             </View>
@@ -263,7 +377,7 @@ export default class Field extends Component {
     renderLoading() {
         return (
             <View style={this.styles.loading}>
-                <Text style={this.styles.loadingLabel}>Creating the Field...</Text>
+                <Text style={this.styles.loadingLabel}>{this.state.loadingMessage}</Text>
             </View>
         );
     }
@@ -281,24 +395,34 @@ export default class Field extends Component {
 
     styles = StyleSheet.create({
         content: {
-            flex: 3,
+            flex: 2,
             justifyContent: 'flex-end',
+            backgroundColor: 'black',
         },
         field: {
             flexWrap: 'wrap',
             flexDirection: 'row',
-            justifyContent: 'center'
+            backgroundColor: '#9e9e9e',
         },
         loading: {
-            flex: 1,
+            height: Dimensions.get('window').width,
             justifyContent: 'center',
             alignItems: 'center',
-            backgroundColor: '#0077c2'
+            backgroundColor: '#9e9e9e',
         },
         loadingLabel: {
             fontSize: 32,
-            fontWeight: 'bold',
-            color: 'white'
+            fontWeight: 'bold'
+        },
+        menuButton: {
+            flex: 1,
+            justifyContent: 'center',
+            alignItems: 'center',
+        },
+        menuButtonLabel: {
+            fontSize: 32,
+            color: 'white',
+            textAlign: 'center',
         }
     });
 }

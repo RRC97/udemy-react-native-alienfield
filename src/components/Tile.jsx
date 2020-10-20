@@ -9,14 +9,14 @@ export default class Tile extends Component {
                 <TouchableOpacity style={this.styles.tileActived} onPress={() => this.props.onClick(this.props.index)}>
                     {this.props.tile.value >= 0
                     ?<Text style={this.styles.label}>{this.props.tile.value || ''}</Text>
-                    :<Text style={this.styles.label}>&#128163;</Text>}
+                    :<Text style={this.styles.label}>&#128126;</Text>}
                 </TouchableOpacity>
             );
         } else {
             return (
                 <TouchableOpacity style={this.styles.tile} onPress={() => this.props.onClick(this.props.index)} onLongPress={() => this.props.onLongClick(this.props.index)}>
                     {this.props.tile.marked
-                    ?<Text style={this.styles.labelMarked}>&#9873;</Text>
+                    ?<Text style={this.styles.labelMarked}>&#9762;</Text>
                     :<Text style={this.styles.label}></Text>}
                 </TouchableOpacity>
             );
@@ -24,10 +24,10 @@ export default class Tile extends Component {
     }
 
     colors = {
-        light: '#80d6ff',
-        dark: '#0077c2',
-        primary: '#42a5f5',
-        secondary: '#e3f2fd',
+        light: '#cfcfcf',
+        dark: '#707070',
+        primary: '#9e9e9e',
+        secondary: '#212121',
         values: [
             'blue', 'green', 'goldenrod', 'red', 'darkblue', 'darkgreen', 'darkred', 'black'
         ]
@@ -59,13 +59,13 @@ export default class Tile extends Component {
             alignItems: 'center'
         },
         label: {
-            color: this.colors.values[this.props.tile.value - 1 || 0] || 'gray',
+            color: '#76ff03',
             fontWeight: 'bold',
-            fontSize: (this.props.size / 3) * 2
+            fontSize: (this.props.size / 3) * 2,
+            fontFamily: "open_display",
         },
         labelMarked: {
-            color: 'red',
-            fontWeight: 'bold',
+            color: '#76ff03',
             fontSize: (this.props.size / 3) * 2
         }
     });
